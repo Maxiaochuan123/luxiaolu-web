@@ -47,7 +47,7 @@
       </el-table-column>
       <el-table-column label="绑定客户" width="300">
         <template #default="{ row }">
-          <template v-if="row.customer">
+          <template v-if="row.isBound">
             <div class="customer-info">
               <el-avatar :size="32" :src="row.customerAvatar" />
               <div class="customer-details">
@@ -74,8 +74,9 @@
           <el-button link type="primary" @click="handleGetFriendDetail(row)">
             获取好友细节
           </el-button>
-          <el-button link type="primary" @click="handleSendMessageToOne(row)"> 发送消息 </el-button>
-          <div class="sync-status">{{ row.syncStatus }}</div>
+          <el-button link type="primary" @click="handleSyncFriendCircle(row)">
+            手动同步朋友圈
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -92,6 +93,68 @@
         @current-change="handleCurrentChange"
       />
     </div>
+
+    <!-- 添加绑定客户对话框 -->
+    <el-dialog
+      v-model="showBindDialog"
+      title="绑定客户"
+      width="900px"
+      :close-on-click-modal="false"
+    >
+      <div class="bind-form">
+        <el-form :model="bindForm" inline>
+          <el-form-item label="用户">
+            <el-input v-model="bindForm.keyword" placeholder="昵称/手机号" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="bindForm.status" placeholder="状态" style="width: 120px">
+              <el-option label="已绑定" value="已绑定" />
+              <el-option label="未绑定" value="未绑定" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleBindSearch">搜索</el-button>
+            <el-button @click="handleBindReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <!-- 绑定客户表格 -->
+        <el-table :data="customerTableData" style="width: 100%">
+          <el-table-column label="客户编号" prop="id" />
+          <el-table-column label="昵称" prop="nickname" />
+          <el-table-column label="手机号码" prop="phone" />
+          <el-table-column label="姓名" prop="name" />
+          <el-table-column label="绑定状态" prop="bindStatus">
+            <template #default="{ row }">
+              <el-tag :type="row.bindStatus === '已绑定' ? 'success' : ''">
+                {{ row.bindStatus }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleConfirmBind(row)">绑定</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-dialog>
+
+    <!-- 取消绑定确认对话框 -->
+    <el-dialog
+      v-model="showUnbindConfirm"
+      title="提示"
+      width="300px"
+      :close-on-click-modal="false"
+    >
+      <span>是否确认取消绑定该客户？</span>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showUnbindConfirm = false">取消</el-button>
+          <el-button type="primary" @click="handleConfirmUnbind">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -113,6 +176,36 @@ export default {
         pageSize: 10,
         total: 0,
       },
+      showBindDialog: false,
+      showUnbindConfirm: false,
+      bindForm: {
+        keyword: '',
+        status: '',
+      },
+      customerTableData: [
+        {
+          id: 'KH20221110100001',
+          nickname: '鹿客7198',
+          phone: '17762345678',
+          name: '张三',
+          bindStatus: '已绑定',
+        },
+        {
+          id: 'KH20221110100001',
+          nickname: '鹿客7198',
+          phone: '17762345678',
+          name: '-',
+          bindStatus: '未绑定',
+        },
+        {
+          id: 'KH20221110100001',
+          nickname: 'JAY',
+          phone: '17762345678',
+          name: '王五',
+          bindStatus: '已绑定',
+        },
+      ],
+      currentUnbindRow: null,
     };
   },
   created() {
@@ -145,7 +238,19 @@ export default {
                 customerPhone: '13558552521',
                 customerAvatar: 'https://example.com/avatar.jpg',
                 syncCount: 30,
-                syncStatus: '手动同步朋友圈',
+                isBound: true, // 已绑定
+              },
+              {
+                id: 2,
+                avatar: 'https://example.com/avatar2.jpg',
+                nickname: '好友2',
+                weixinId: 'weixin2',
+                remark: '小鹿车商-URA2Y',
+                customer: null,
+                customerPhone: null,
+                customerAvatar: null,
+                syncCount: 20,
+                isBound: false, // 未绑定
               },
             ],
             total: 100,
@@ -179,16 +284,17 @@ export default {
       ElMessage.success('获取好友圈');
     },
     handleBindCustomer(row) {
-      ElMessage.success(`绑定客户: ${row.nickname}`);
+      this.showBindDialog = true;
     },
     handleUnbindCustomer(row) {
-      ElMessage.success(`取消绑定客户: ${row.nickname}`);
+      this.currentUnbindRow = row;
+      this.showUnbindConfirm = true;
     },
     handleGetFriendDetail(row) {
       ElMessage.success(`获取好友细节: ${row.nickname}`);
     },
-    handleSendMessageToOne(row) {
-      ElMessage.success(`发送消息给: ${row.nickname}`);
+    handleSyncFriendCircle(row) {
+      ElMessage.success(`手动同步朋友圈: ${row.nickname}`);
     },
     handleSizeChange(val) {
       this.page.pageSize = val;
@@ -197,6 +303,26 @@ export default {
     handleCurrentChange(val) {
       this.page.currentPage = val;
       this.loadData();
+    },
+    handleBindSearch() {
+      // TODO: 实现搜索逻辑
+    },
+    handleBindReset() {
+      this.bindForm.keyword = '';
+      this.bindForm.status = '';
+    },
+    handleConfirmBind(customer) {
+      ElMessage.success(`绑定客户：${customer.name}`);
+      this.showBindDialog = false;
+      this.loadData(); // 刷新列表
+    },
+    handleConfirmUnbind() {
+      if (this.currentUnbindRow) {
+        ElMessage.success(`取消绑定客户：${this.currentUnbindRow.customer}`);
+        this.showUnbindConfirm = false;
+        this.currentUnbindRow = null;
+        this.loadData(); // 刷新列表
+      }
     },
   },
 };
@@ -254,6 +380,12 @@ export default {
     margin-top: 16px;
     display: flex;
     justify-content: flex-end;
+  }
+
+  .bind-form {
+    .el-form {
+      margin-bottom: 16px;
+    }
   }
 }
 </style>

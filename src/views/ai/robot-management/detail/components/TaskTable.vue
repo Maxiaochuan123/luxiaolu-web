@@ -26,20 +26,31 @@
     <!-- 表格 -->
     <div class="table-container">
       <el-table ref="tableRef" v-loading="loading" :data="tableData" style="width: 100%">
-        <el-table-column label="编号" prop="id" width="80" align="center" />
-        <el-table-column label="任务名称" prop="name" width="200" />
-        <el-table-column label="任务状态" prop="status" width="100" align="center">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)">{{ row.status }}</el-tag>
+        <el-table-column label="编号" type="index" width="80" align="center">
+          <template #default="scope">
+            {{ (page.currentPage - 1) * page.pageSize + scope.$index + 1 }}
           </template>
         </el-table-column>
-        <el-table-column label="任务类型" prop="type" width="150" />
-        <el-table-column label="创建时间" prop="createTime" width="180" />
-        <el-table-column label="更新时间" prop="updateTime" width="180" />
-        <el-table-column label="创建人" prop="creator" width="150" />
+        <el-table-column label="任务名称" prop="taskName" width="200" />
+        <el-table-column label="任务状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.taskStatus)">{{ getStatusText(row.taskStatus) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="任务类型" prop="taskTypeName" width="150" />
+        <el-table-column label="创建时间" prop="createdAt" width="180" />
+        <el-table-column label="更新时间" prop="updatedAt" width="180" />
+        <el-table-column label="创建人" prop="createdBy" width="150" />
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button link type="danger" @click="handleDelete(row)"> 删除 </el-button>
+            <el-button 
+              link 
+              type="danger" 
+              :loading="deleting" 
+              @click="handleDelete(row)"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -74,8 +85,8 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showAddModal = false">取消</el-button>
-          <el-button type="primary" @click="handleConfirmAdd">确认</el-button>
+          <el-button @click="showAddModal = false" :disabled="submitting">取消</el-button>
+          <el-button type="primary" @click="handleConfirmAdd" :loading="submitting">确认</el-button>
         </span>
       </template>
     </el-dialog>
@@ -83,7 +94,8 @@
 </template>
 
 <script>
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { getTaskList, getTaskTypes, createTask, removeTask } from '@/api/ai/robot-management';
 
 export default {
   name: 'TaskTable',
@@ -103,65 +115,62 @@ export default {
       taskForm: {
         type: '',
       },
-      taskOptions: [
-        { label: '获取好友列表', value: 'getFriendList' },
-        { label: '获取好友圈信息', value: 'getFriendCircle' },
-        { label: '心跳', value: 'heartbeat' },
-        { label: '获取指定好友朋友圈', value: 'getSpecificFriendCircle' },
-      ],
+      taskOptions: [],
+      submitting: false,
+      deleting: false,
     };
+  },
+  computed: {
+    actuatorId() {
+      return this.$route.params.id;
+    }
   },
   created() {
     this.loadData();
+    this.loadTaskTypes();
   },
   methods: {
     getStatusType(status) {
       const types = {
-        未开始: 'info',
-        进行中: 'warning',
-        已完成: 'success',
+        NotStart: 'info',
+        InProgress: 'warning',
+        Ended: 'success',
+        Unknown: 'info'
       };
       return types[status] || 'info';
+    },
+    getStatusText(status) {
+      const texts = {
+        NotStart: '未开始',
+        InProgress: '进行中',
+        Ended: '已完成',
+        Unknown: '未知'
+      };
+      return texts[status] || status;
     },
     async loadData() {
       this.loading = true;
       try {
-        // 模拟API调用
-        const res = await this.mockFetchData();
-        this.tableData = res.list;
-        this.page.total = res.total;
+        const res = await getTaskList({
+          actuatorId: this.actuatorId,
+          keyword: this.searchForm.keyword,
+          pageIndex: this.page.currentPage,
+          pageSize: this.page.pageSize
+        });
+        
+        if (res.data.success) {
+          const { records, total } = res.data.data;
+          this.tableData = records;
+          this.page.total = total;
+        } else {
+          ElMessage.error(res.data.msg || '获取任务列表失败');
+        }
+      } catch (error) {
+        console.error('获取任务列表失败:', error);
+        ElMessage.error('获取任务列表失败');
       } finally {
         this.loading = false;
       }
-    },
-    mockFetchData() {
-      return new Promise(resolve => {
-        setTimeout(() => {
-          resolve({
-            list: [
-              {
-                id: 4,
-                name: '获取好友列表',
-                status: '未开始',
-                type: '获取好友列表',
-                createTime: '2024-12-12 10:30:30',
-                updateTime: '2024-12-12 10:30:30',
-                creator: '张三\n17761234567',
-              },
-              {
-                id: 5,
-                name: '获取朋友圈信息',
-                status: '进行中',
-                type: '获取朋友圈信息',
-                createTime: '2024-12-12 10:30:30',
-                updateTime: '2024-12-12 10:30:30',
-                creator: '张三\n17761234567',
-              },
-            ],
-            total: 2,
-          });
-        }, 500);
-      });
     },
     handleSearch() {
       this.page.currentPage = 1;
@@ -174,19 +183,59 @@ export default {
     handleAddTask() {
       this.showAddModal = true;
     },
-    handleConfirmAdd() {
+    async handleConfirmAdd() {
       if (!this.taskForm.type) {
         ElMessage.warning('请选择任务类型');
         return;
       }
-      ElMessage.success('添加任务：' + this.taskForm.type);
-      this.showAddModal = false;
-      this.taskForm.type = '';
-      this.loadData();
+
+      this.submitting = true;
+      try {
+        const res = await createTask({
+          actuatorId: this.actuatorId,
+          taskType: this.taskForm.type
+        });
+
+        if (res.data.success) {
+          ElMessage.success('添加任务成功');
+          this.showAddModal = false;
+          this.taskForm.type = '';
+          this.loadData(); // 刷新列表
+        } else {
+          ElMessage.error(res.data.msg || '添加任务失败');
+        }
+      } catch (error) {
+        console.error('添加任务失败:', error);
+        ElMessage.error('添加任务失败');
+      } finally {
+        this.submitting = false;
+      }
     },
-    handleDelete(row) {
-      ElMessage.success('删除任务：' + row.id);
-      this.loadData();
+    async handleDelete(row) {
+      try {
+        await ElMessageBox.confirm('确认要删除该任务吗？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        });
+
+        this.deleting = true;
+        const res = await removeTask({ id: row.id });
+
+        if (res.data.success) {
+          ElMessage.success('删除任务成功');
+          this.loadData(); // 刷新列表
+        } else {
+          ElMessage.error(res.data.msg || '删除任务失败');
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除任务失败:', error);
+          ElMessage.error('删除任务失败');
+        }
+      } finally {
+        this.deleting = false;
+      }
     },
     handleSizeChange(val) {
       this.page.pageSize = val;
@@ -195,6 +244,23 @@ export default {
     handleCurrentChange(val) {
       this.page.currentPage = val;
       this.loadData();
+    },
+    // 获取任务类型列表
+    async loadTaskTypes() {
+      try {
+        const res = await getTaskTypes();
+        if (res.data.success) {
+          this.taskOptions = res.data.data.map(item => ({
+            label: item.name,
+            value: item.value
+          }));
+        } else {
+          ElMessage.error(res.data.msg || '获取任务类型列表失败');
+        }
+      } catch (error) {
+        console.error('获取任务类型列表失败:', error);
+        ElMessage.error('获取任务类型列表失败');
+      }
     },
   },
 };

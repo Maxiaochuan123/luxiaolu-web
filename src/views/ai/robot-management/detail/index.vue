@@ -61,8 +61,19 @@
 
               <!-- 底部按钮 -->
               <div class="bottom-actions">
-                <el-button class="action-btn" @click="handleWakeup">唤醒</el-button>
-                <el-button class="action-btn" type="primary" @click="handleConfirmWakeup">
+                <el-button 
+                  class="action-btn" 
+                  :loading="waking"
+                  @click="handleWakeup"
+                >
+                  唤醒
+                </el-button>
+                <el-button 
+                  class="action-btn" 
+                  type="primary" 
+                  :loading="awakening"
+                  @click="handleConfirmWakeup"
+                >
                   确认唤醒
                 </el-button>
               </div>
@@ -82,6 +93,7 @@
 <script>
 import { User, UserFilled, List } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { wakeUpRobot, awakenRobot } from '@/api/ai/robot-management';
 import FriendTable from './components/FriendTable.vue';
 import GroupTable from './components/GroupTable.vue';
 import TaskTable from './components/TaskTable.vue';
@@ -126,6 +138,8 @@ export default {
           icon: 'List',
         },
       ],
+      waking: false,
+      awakening: false,
     };
   },
   computed: {
@@ -146,27 +160,64 @@ export default {
   },
   methods: {
     loadRobotInfo() {
-      const robotId = this.$route.params.id;
-      // 模拟加载数据
-      this.robotInfo = {
-        name: `小胡同步小助手${robotId}`,
-        account: 'chegetongbu',
-        ip: '172.16.20.174',
-        friends: 2800,
-        status: 'online',
-        currentTask: '同步好友中',
-        lastExecuteTime: '2024.07.02 15:30:30',
-        type: 'sync',
-      };
+      const robotInfo = this.$route.query.robotInfo;
+      if (robotInfo) {
+        try {
+          const info = JSON.parse(robotInfo);
+          this.robotInfo = {
+            name: info.name,
+            account: info.account,
+            ip: info.ip,
+            friends: info.friends,
+            status: info.status,
+            currentTask: info.currentTask,
+            lastExecuteTime: info.lastExecuteTime,
+            type: info.type,
+          };
+          console.log('this.robotInfo', this.robotInfo);
+        } catch (error) {
+          console.error('解析机器人信息失败:', error);
+        }
+      }
     },
     handleMenuSelect(key) {
       this.activeKey = key;
     },
-    handleWakeup() {
-      ElMessage.info('唤醒机器人');
+    async handleWakeup() {
+      if (this.waking) return;
+      
+      this.waking = true;
+      try {
+        const res = await wakeUpRobot({ id: this.$route.params.id });
+        if (res.data.success) {
+          ElMessage.success('唤醒指令已发送');
+        } else {
+          ElMessage.error(res.data.msg || '唤醒失败');
+        }
+      } catch (error) {
+        console.error('唤醒失败:', error);
+        ElMessage.error('唤醒失败');
+      } finally {
+        this.waking = false;
+      }
     },
-    handleConfirmWakeup() {
-      ElMessage.success('确认唤醒');
+    async handleConfirmWakeup() {
+      if (this.awakening) return;
+      
+      this.awakening = true;
+      try {
+        const res = await awakenRobot({ id: this.$route.params.id });
+        if (res.data.success) {
+          ElMessage.success('确认唤醒成功');
+        } else {
+          ElMessage.error(res.data.msg || '确认唤醒失败');
+        }
+      } catch (error) {
+        console.error('确认唤醒失败:', error);
+        ElMessage.error('确认唤醒失败');
+      } finally {
+        this.awakening = false;
+      }
     },
   },
 };
@@ -186,7 +237,7 @@ export default {
     min-width: 100%;
   }
 
-  .left-side, .right-info {
+  .left-side, .right-side {
     border: 1px solid #eee;
   }
 

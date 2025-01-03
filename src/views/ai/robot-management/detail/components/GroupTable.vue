@@ -32,9 +32,9 @@
       @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="50" align="center" fixed="left" />
-      <el-table-column label="ID" prop="id" width="100" align="center" />
-      <el-table-column label="群名" prop="name" width="300" />
-      <el-table-column label="人数" prop="memberCount" width="100" align="center" />
+      <el-table-column label="ID" prop="id" align="center" />
+      <el-table-column label="群名" prop="name" />
+      <el-table-column label="人数" prop="memberCount" align="center" />
     </el-table>
 
     <!-- 分页 -->

@@ -85,7 +85,11 @@
       >
         <div class="qrcode-content">
           <div class="qrcode-box">
-            <!-- 二维码内容 -->
+            <img v-if="qrData.url" :src="qrData.url" alt="登录二维码" class="qr-code-img" />
+            <div v-else class="qr-code-loading">
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>加载中...</span>
+            </div>
           </div>
           <div class="qrcode-tip">请使用机器人扫码登录</div>
         </div>
@@ -106,6 +110,7 @@
       >
         <robot-form
           ref="robotFormRef"
+          :qr-data="qrData"
           @success="handleFormSuccess"
         />
         <template #footer>
@@ -120,9 +125,10 @@
 </template>
 
 <script>
-import { User, Plus } from '@element-plus/icons-vue';
+import { User, Plus, Loading } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import RobotForm from './components/RobotForm.vue';
+import { getPageList, getLoginQrCode } from '@/api/ai/robot-management';
 
 export default {
   name: 'RobotManagement',
@@ -130,83 +136,109 @@ export default {
     RobotForm,
     User,
     Plus,
+    Loading,
   },
   data() {
     return {
       activeTab: 'all',
       showQrCodeModal: false,
       showRobotForm: false,
-      robots: [
-        {
-          id: '1',
-          name: '小胡同步小助手1',
-          account: 'chegetongbu',
-          ip: '172.16.20.174',
-          friends: 2800,
-          currentTask: '同步好友中',
-          lastExecuteTime: '2024.07.02 15:30:30',
-          status: 'online',
-          type: 'sync',
-        },
-        {
-          id: '2',
-          name: '小胡同步小助手2',
-          account: 'chegetongbu2',
-          ip: '172.16.20.174',
-          friends: 2800,
-          currentTask: '心跳',
-          lastExecuteTime: '2024.07.02 15:30:30',
-          status: 'offline',
-          type: 'sync',
-        },
-        {
-          id: '3',
-          name: '运营客服-天天',
-          account: 'kefu-tiantian',
-          ip: '172.16.20.174',
-          friends: 2800,
-          currentTask: '发送消息',
-          lastExecuteTime: '2024.07.02 15:30:30',
-          status: 'online',
-          type: 'operation',
-        },
-      ],
+      qrData: {}, // 二维码相关数据
+      robots: [],
     };
   },
+  created() {
+    this.fetchRobots();
+  },
   methods: {
+    // 获取机器人列表
+    async fetchRobots() {
+      try {
+        const res = await getPageList({
+          pageIndex: 1,
+          pageSize: 100,
+          keyword: ''
+        });
+        if (res.data.success) {
+          const { records } = res.data.data;
+          this.robots = records.map(item => ({
+            id: item.id,
+            name: item.actuatorName,
+            account: item.actuatorKey,
+            ip: item.actuatorIp,
+            status: 'online', // TODO: 根据实际情况设置状态
+            type: item.type === 1 ? 'sync' : 'operation', // 1:同步 2:运营
+            friends: 0, // TODO: 如果后端返回则使用实际数据
+            currentTask: '-',
+            lastExecuteTime: item.updatedAt
+          }));
+        } else {
+          ElMessage.error(res.data.msg || '获取机器人列表失败');
+        }
+      } catch (error) {
+        console.error('获取机器人列表失败:', error);
+        ElMessage.error('获取机器人列表失败');
+      }
+    },
     showDetail(robot) {
-      this.$router.push(`/ai/robot-management/${robot.id}`);
+      this.$router.push({
+        path: `/ai/robot-management/${robot.id}`,
+        query: { robotInfo: JSON.stringify(robot) }
+      });
     },
     showTaskList(robot) {
       this.$router.push({
         path: `/ai/robot-management/${robot.id}`,
-        query: { tab: 'task' },
+        query: { 
+          tab: 'task',
+          robotInfo: JSON.stringify(robot)
+        }
       });
     },
-    handleAddRobot() {
-      this.showQrCodeModal = true;
+    // 获取并显示二维码
+    async handleAddRobot() {
+      try {
+        const res = await getLoginQrCode();
+        console.log('res', res);
+        
+        if (res.data.success) {
+          const { qrCodeUrl, key, qrUuid } = res.data.data;
+          this.qrData = {
+            url: qrCodeUrl,
+            key,
+            uuid: qrUuid,
+          }
+          console.log('this.qrData', this.qrData);
+          this.showQrCodeModal = true;
+        } else {
+          ElMessage.error(res.data.msg || '获取二维码失败');
+        }
+      } catch (error) {
+        console.error('获取二维码失败:', error);
+        ElMessage.error('获取二维码失败');
+      }
     },
     closeQrCodeModal() {
       this.showQrCodeModal = false;
     },
     handleQrCodeLogin() {
-      this.closeQrCodeModal();
+      this.showQrCodeModal = false;
       this.showRobotForm = true;
     },
-    submitForm() {
-      this.$refs.robotFormRef.submit().then(() => {
+    async submitForm() {
+      try {
+        await this.$refs.robotFormRef.submit();
         this.showRobotForm = false;
-        this.refreshList();
-      });
+        this.qrData = {};
+        this.fetchRobots(); // 刷新列表
+      } catch (error) {
+        // 表单组件内部会处理错误
+      }
     },
     handleFormSuccess() {
-      ElMessage.success('添加成功');
       this.showRobotForm = false;
-      // TODO: 刷新列表
-    },
-    refreshList() {
-      ElMessage.success('添加成功');
-      // TODO: 刷新列表
+      this.qrData = {};
+      this.fetchRobots(); // 刷新列表
     },
   },
 };
@@ -382,17 +414,36 @@ export default {
   padding: 24px;
 
   .qrcode-box {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 16px;
+    border: 1px solid #eee;
+
+    .qr-code-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .qr-code-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: #909399;
+
+      .el-icon {
+        font-size: 24px;
+      }
+    }
   }
 
   .qrcode-tip {
     color: #666;
     margin-bottom: 24px;
-  }
-
-  .qrcode-actions {
-    display: flex;
-    gap: 12px;
   }
 }
 </style>
