@@ -5,7 +5,7 @@
            ref="loginForm"
            :model="loginForm"
            label-width="0">
-    <el-form-item v-if="tenantMode"
+    <!-- <el-form-item v-if="tenantMode"
                   prop="tenantId">
       <el-input @keyup.enter="handleLogin"
                 v-model="loginForm.tenantId"
@@ -15,7 +15,7 @@
           <i class="icon-quanxian"></i>
         </template>
       </el-input>
-    </el-form-item>
+    </el-form-item> -->
     <el-form-item prop="username">
       <el-input @keyup.enter="handleLogin"
                 v-model="loginForm.username"

@@ -6,7 +6,7 @@
         <el-form-item label="任务名称">
           <el-input
             v-model="searchForm.keyword"
-            placeholder="请输入"
+            placeholder="请输入任务名称"
             clearable
             @keyup.enter="handleSearch"
           />
@@ -38,8 +38,8 @@
           </template>
         </el-table-column>
         <el-table-column label="任务类型" prop="taskTypeName" width="150" />
-        <el-table-column label="创建时间" prop="createdAt" width="180" />
-        <el-table-column label="更新时间" prop="updatedAt" width="180" />
+        <el-table-column label="创建时间" prop="createTime" width="180" />
+        <el-table-column label="更新时间" prop="updateTime" width="180" />
         <el-table-column label="创建人" prop="createdBy" width="150" />
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">

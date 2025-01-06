@@ -34,20 +34,19 @@
                         {{ robot.type === 'sync' ? '同步账号' : '运营账号' }}
                       </el-tag>
                     </div>
-                    <div class="robot-account">{{ robot.account }}</div>
                     <div class="robot-ip">{{ robot.ip }}</div>
                   </div>
                 </div>
                 <div class="robot-stats">
                   <div class="stat-item">
                     <div class="stat-label">好友:</div>
-                    <div class="stat-value">{{ robot.friends }}</div>
+                    <div class="stat-value">{{ '--' }}</div>
                   </div>
                 </div>
                 <div class="robot-status">
                   <div class="status-item">
                     <div class="status-label">当前执行:</div>
-                    <div class="status-value">{{ robot.currentTask }}</div>
+                    <div class="status-value">{{ '--' }}</div>
                   </div>
                   <el-button size="small" type="primary" @click.stop="showTaskList(robot)">
                     任务列表
@@ -55,7 +54,7 @@
                 </div>
                 <div class="robot-time">
                   <div class="time-label">最近执行:</div>
-                  <div class="time-value">{{ robot.lastExecuteTime }}</div>
+                  <div class="time-value">{{ robot.updateTime || '--' }}</div>
                 </div>
               </el-card>
             </div>
@@ -69,12 +68,12 @@
             </div>
           </div>
         </el-tab-pane>
-        <el-tab-pane label="同步账号" name="sync">
-          <!-- 同步账号列表，结构同上 -->
+        <!--<el-tab-pane label="同步账号" name="sync">
+          <!~~ 同步账号列表，结构同上 ~~>
         </el-tab-pane>
         <el-tab-pane label="运营账号" name="operation">
-          <!-- 运营账号列表，结构同上 -->
-        </el-tab-pane>
+          <!~~ 运营账号列表，结构同上 ~~>
+        </el-tab-pane>-->
       </el-tabs>
 
       <el-dialog
@@ -91,7 +90,7 @@
               <span>加载中...</span>
             </div>
           </div>
-          <div class="qrcode-tip">请使用机器人扫码登录</div>
+          <div class="qrcode-tip">请使用微信扫码登录</div>
         </div>
         <template #footer>
           <span class="dialog-footer">
@@ -181,9 +180,16 @@ export default {
       }
     },
     showDetail(robot) {
+      // this.$router.push({
+      //   path: `/ai/robot-management/${robot.id}`,
+      //   query: { robotInfo: JSON.stringify(robot) }
+      // });
       this.$router.push({
         path: `/ai/robot-management/${robot.id}`,
-        query: { robotInfo: JSON.stringify(robot) }
+        query: { 
+          tab: 'task',
+          robotInfo: JSON.stringify(robot)
+        }
       });
     },
     showTaskList(robot) {
@@ -277,7 +283,7 @@ export default {
         .status-tag {
           position: absolute;
           bottom: -4px;
-          right: -4px;
+          right: 8px;
           transform: scale(0.8);
           transform-origin: right bottom;
         }
@@ -302,7 +308,6 @@ export default {
           }
         }
 
-        .robot-account,
         .robot-ip {
           font-size: 13px;
           color: #666;
@@ -356,9 +361,9 @@ export default {
         .status-value {
           font-weight: 500;
           font-size: 13px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          // white-space: nowrap;
+          // overflow: hidden;
+          // text-overflow: ellipsis;
         }
       }
 
@@ -391,7 +396,7 @@ export default {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 160px;
+      height: 143px;
       color: #909399;
       cursor: pointer;
 

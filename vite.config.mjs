@@ -4,7 +4,7 @@ import createVitePlugins from './vite/plugins'
 // https://vitejs.dev/config/
 export default ({ mode, command }) => {
   const env = loadEnv(mode, process.cwd())
-  const { VITE_APP_BASE } = env
+  const { VITE_APP_BASE, VITE_APP_PROXY_URL } = env
   return defineConfig({
     base: VITE_APP_BASE,
     server: {
@@ -13,7 +13,7 @@ export default ({ mode, command }) => {
       cors: true,
       proxy: {
         '/api': {
-          target: 'http://1.95.49.180:8198',
+          target: VITE_APP_PROXY_URL,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, '/')
         }

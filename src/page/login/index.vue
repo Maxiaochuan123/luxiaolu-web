@@ -14,21 +14,21 @@
       <div class="login-border animate__animated animate__fadeInRight">
         <div class="login-main">
           <p class="login-title">
-            {{ $t('login.title') }}{{website.title}}
-            <top-lang></top-lang>
+            {{ $t('login.title') }}
+            <!-- <top-lang></top-lang> -->
           </p>
           <userLogin v-if="activeName==='user'"></userLogin>
           <codeLogin v-else-if="activeName==='code'"></codeLogin>
           <faceLogin v-else-if="activeName==='face'"></faceLogin>
-          <div class="login-menu">
+          <!-- <div class="login-menu">
             <a href="#"
                @click.stop="activeName='user'">{{ $t('login.userLogin') }}</a>
-            <!-- <a href="#"
-               @click.stop="activeName='code'">{{ $t('login.phoneLogin') }}</a> -->
+            <a href="#"
+               @click.stop="activeName='code'">{{ $t('login.phoneLogin') }}</a>
             <a href="#"
                @click.stop="activeName='face'">{{ $t('login.faceLogin') }}</a>
-          </div>
-          <thirdLogin></thirdLogin>
+          </div> -->
+          <!-- <thirdLogin></thirdLogin> -->
         </div>
       </div>
     </div>
