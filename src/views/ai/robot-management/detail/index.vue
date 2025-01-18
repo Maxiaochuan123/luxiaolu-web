@@ -126,16 +126,16 @@ export default {
       },
       activeKey: 'friend',
       menuOptions: [
-        // {
-        //   label: '好友列表',
-        //   key: 'friend',
-        //   icon: 'User',
-        // },
-        // {
-        //   label: '群列表',
-        //   key: 'group',
-        //   icon: 'UserFilled',
-        // },
+        {
+          label: '好友列表',
+          key: 'friend',
+          icon: 'User',
+        },
+        {
+          label: '群列表',
+          key: 'group',
+          icon: 'UserFilled',
+        },
         {
           label: '任务列表',
           key: 'task',

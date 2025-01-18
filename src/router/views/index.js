@@ -99,4 +99,25 @@ export default [
       },
     ],
   },
+  {
+    path: '/product',
+    component: Layout,
+    redirect: '/product/word-library',
+    name: '产品配置',
+    meta: {
+      title: '产品配置',
+      icon: 'el-icon-goods'
+    },
+    children: [
+      {
+        path: 'word-library',
+        name: '二手车单词库',
+        component: () => import('@/views/product/word-library/index.vue'),
+        meta: {
+          title: '二手车单词库',
+          icon: 'el-icon-collection'
+        }
+      }
+    ]
+  }
 ];
