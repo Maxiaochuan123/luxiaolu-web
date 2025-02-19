@@ -119,5 +119,44 @@ export default [
         }
       }
     ]
-  }
+  },
+  {
+    path: '/customer',
+    component: Layout,
+    redirect: '/customer/list',
+    name: '客户管理',
+    meta: {
+      title: '客户管理',
+      icon: 'el-icon-user',
+    },
+    children: [
+      {
+        path: 'list',
+        name: '客户列表',
+        component: () => import('@/views/customer/list/index.vue'),
+        meta: {
+          title: '客户列表',
+          icon: 'el-icon-document',
+        },
+      },
+      {
+        path: 'sync',
+        name: '同步客户管理',
+        component: () => import('@/views/customer/sync/index.vue'),
+        meta: {
+          title: '同步客户管理',
+          icon: 'el-icon-refresh',
+        },
+      },
+      {
+        path: 'tasks',
+        name: '同步任务管理',
+        component: () => import('@/views/customer/tasks/index.vue'),
+        meta: {
+          title: '同步任务管理',
+          icon: 'el-icon-s-operation',
+        },
+      },
+    ],
+  },
 ];
